@@ -1,7 +1,7 @@
 /* Standalone visual component. No framework, assets, network requests or timers. */
 (() => {
   const tag = 'dsh-claude-effort-slider';
-  const pluginVersion = '1.0.10';
+  const pluginVersion = '1.0.11';
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const fallbackSteps = ['Low', 'Medium', 'High', 'Extra', 'Max', 'Ultracode']
     .map(label => ({ id: label.toLowerCase(), label }));
@@ -114,6 +114,8 @@
           .pixel::before{content:"";display:block;width:100%;height:100%;background:#aaa0df;border-radius:inherit;opacity:var(--opacity);animation:flicker var(--duration) ease-in-out var(--delay) infinite alternate;animation-play-state:paused}
           .maximum .pixels{opacity:1;transition-duration:160ms,210ms}
           .burning .pixel{animation:ignite var(--ignite-duration) ease-out var(--ignite-delay) both;animation-play-state:paused}
+          .burning.settled .pixel{animation:none;opacity:1;transform:scale(1)}
+          .maximum.settled .pixels{transition:none}
           .maximum .pixel{animation-play-state:running}
           .burning .pixel::before{animation-play-state:running}
           .maximum .fill{opacity:0}
@@ -146,7 +148,7 @@
       this._pixels = find('.pixels');
       this._pixels.addEventListener('transitionend', event => {
         if (event.target === this._pixels && event.propertyName === 'opacity' && !this._panel.classList.contains('maximum')) {
-          this._panel.classList.remove('burning');
+          this._panel.classList.remove('burning', 'settled');
         }
       });
       this._help = find('.help');
@@ -254,13 +256,21 @@
       });
     }
 
-    _paint(position, preview = false) {
+    _paint(position, preview = false, animate = preview) {
       const index = clamp(Math.round(position), 0, this._steps.length - 1);
       const maximum = index === this._steps.length - 1 && this._steps.length > 1 && (!this._defaultActive || preview);
       const label = this._defaultActive && !preview ? 'Default' : this._steps[index].label;
       this._panel.style.setProperty('--position', position / Math.max(1, this._steps.length - 1));
-      if (maximum) this._panel.classList.add('burning');
-      else if (matchMedia('(prefers-reduced-motion: reduce)').matches) this._panel.classList.remove('burning');
+      if (maximum) {
+        if (!this._panel.classList.contains('burning')) {
+          this._panel.classList.toggle('settled', !animate);
+        } else if (animate && !this._panel.classList.contains('maximum')) {
+          this._panel.classList.remove('settled');
+        }
+        this._panel.classList.add('burning');
+      } else if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        this._panel.classList.remove('burning', 'settled');
+      }
       this._panel.classList.toggle('maximum', maximum);
       this._title.setLabel(label, index);
       this._track.setAttribute('aria-valuemin', '0');
@@ -321,7 +331,7 @@
       const changed = index !== this._value || this._defaultActive;
       this._defaultActive = false;
       this._value = index;
-      this._paint(index);
+      this._paint(index, false, true);
       if (changed) this._emit('change', index);
     }
 
