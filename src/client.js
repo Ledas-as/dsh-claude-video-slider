@@ -169,7 +169,7 @@ function ModelControl({ available, locked, directory, load, select }) {
         h('button', {
           key: 'default', type: 'button', className: 'dsv-default', disabled,
           onClick: () => submit({ provider: selected.provider, model: selected.model }),
-        }, '使用模型默认', defaultActive ? ' · ✓' : ''),
+        }, 'Recommended', defaultActive ? ' · ✓' : ''),
       ] : [
         ...((state.groups || []).map(group => h('div', { key: group.id, className: 'dsv-group' },
           h('div', { className: 'dsv-group-name' }, group.name),

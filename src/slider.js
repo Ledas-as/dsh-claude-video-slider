@@ -1,7 +1,7 @@
 /* Standalone visual component. No framework, assets, network requests or timers. */
 (() => {
   const tag = 'dsh-claude-effort-slider';
-  const pluginVersion = '1.0.7';
+  const pluginVersion = '1.0.10';
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const fallbackSteps = ['Low', 'Medium', 'High', 'Extra', 'Max', 'Ultracode']
     .map(label => ({ id: label.toLowerCase(), label }));
@@ -64,7 +64,7 @@
   if (customElements.get(tag)) return;
 
   class ClaudeEffortSlider extends HTMLElement {
-    static observedAttributes = ['disabled', 'label', 'axis-low', 'axis-high', 'recommended-label'];
+    static observedAttributes = ['disabled', 'label', 'axis-low', 'axis-high'];
 
     constructor() {
       super();
@@ -118,7 +118,6 @@
           .burning .pixel::before{animation-play-state:running}
           .maximum .fill{opacity:0}
           .maximum .value{color:var(--accent)}
-          .recommendation{margin:8px 0 0 11px;color:#a19f96;font-size:12px;min-height:17px}
           :host([disabled]:not([saving])) .track{opacity:.42}
           :host([disabled]:not([saving])) .pixel,:host([disabled]:not([saving])) .pixel::before{animation-play-state:paused}
           @keyframes ignite{from{opacity:0;transform:scale(.35)}to{opacity:1;transform:scale(1)}}
@@ -132,7 +131,6 @@
             <div class="fill"></div><div class="pixels" aria-hidden="true"><div class="cells"></div></div>
             <div class="ticks" aria-hidden="true"></div><div class="thumb" aria-hidden="true"></div>
           </div>
-          <div class="recommendation">Recommended</div>
           <section class="info" id="plugin-info" aria-label="插件信息" hidden>
             <div class="info-heading"><strong>DSH Claude 视频滑块</strong><button class="info-close" type="button" aria-label="关闭插件信息" title="关闭">×</button></div>
             <span class="info-version">v${pluginVersion}</span>
@@ -242,7 +240,7 @@
       this._track.setAttribute('aria-disabled', String(this.disabled));
       for (const [selector, attribute, fallback] of [
         ['.label', 'label', 'Effort'], ['.axis-low', 'axis-low', 'Faster'],
-        ['.axis-high', 'axis-high', 'Smarter'], ['.recommendation', 'recommended-label', 'Recommended'],
+        ['.axis-high', 'axis-high', 'Smarter'],
       ]) this.shadowRoot.querySelector(selector).textContent = this.getAttribute(attribute) ?? fallback;
     }
 
