@@ -1,0 +1,10 @@
+node_modules/
+work/
+outputs/
+/*.tgz
+*.log
+.DS_Store
+Thumbs.db
+.env*
+*.pem
+*.key

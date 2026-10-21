@@ -1,0 +1,31 @@
+{
+  "name": "dsh-claude-video-slider",
+  "version": "1.0.6",
+  "description": "Unofficial DeepSeek Harness plugin imitating Claude UI with animated model and reasoning-effort controls.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ledas-as/dsh-claude-video-slider.git"
+  },
+  "homepage": "https://github.com/Ledas-as/dsh-claude-video-slider#readme",
+  "bugs": { "url": "https://github.com/Ledas-as/dsh-claude-video-slider/issues" },
+  "keywords": ["deepseek-harness", "dsh", "claude-ui", "reasoning", "slider"],
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./lib/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": ["index.js", "cordis.patch.yml", "lib/", "src/", "demo/", "scripts/", "README.md", "VALIDATION.md", "LICENSE", "THIRD_PARTY_NOTICES.md"],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "prepare": "node scripts/build.mjs",
+    "check": "node --check src/slider.js && node --check lib/client.js && node --check index.js"
+  },
+  "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" },
+    "client": { "platform": "web", "inject": ["@deepseek-ai/dsh-client-ui-model-selection", "@deepseek-ai/dsh-api-remotes"] }
+  }
+}
