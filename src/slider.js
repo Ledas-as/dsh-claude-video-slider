@@ -1,7 +1,7 @@
 /* Standalone visual component. No framework, assets, network requests or timers. */
 (() => {
   const tag = 'dsh-claude-effort-slider';
-  const pluginVersion = '1.0.6';
+  const pluginVersion = '1.0.7';
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const fallbackSteps = ['Low', 'Medium', 'High', 'Extra', 'Max', 'Ultracode']
     .map(label => ({ id: label.toLowerCase(), label }));
@@ -119,8 +119,8 @@
           .maximum .fill{opacity:0}
           .maximum .value{color:var(--accent)}
           .recommendation{margin:8px 0 0 11px;color:#a19f96;font-size:12px;min-height:17px}
-          :host([disabled]) .track{opacity:.42}
-          :host([disabled]) .pixel,:host([disabled]) .pixel::before{animation-play-state:paused}
+          :host([disabled]:not([saving])) .track{opacity:.42}
+          :host([disabled]:not([saving])) .pixel,:host([disabled]:not([saving])) .pixel::before{animation-play-state:paused}
           @keyframes ignite{from{opacity:0;transform:scale(.35)}to{opacity:1;transform:scale(1)}}
           @keyframes flicker{from{opacity:var(--opacity)}to{opacity:var(--bright)}}
           @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}.maximum .pixel{opacity:1;transform:none}}

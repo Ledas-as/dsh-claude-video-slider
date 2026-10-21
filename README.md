@@ -4,7 +4,7 @@
 
 为 DSH 桌面端及 Web UI 提供模型选择与推理等级滑块，模仿参考视频中 Claude 的深色面板、白色滑块、档位文字过渡与紫色像素火焰。此项目是独立实现，不是 Anthropic / Claude 或 DeepSeek 的官方产品，与这些品牌无隶属关系。
 
-当前版本：**1.0.6**。适配基线：DeepSeek Harness 桌面版 **0.2.1-rc.2**。最新动画迭代已构建，但尚未重新进行自动或桌面交互测试，详见 [验证状态](VALIDATION.md)。
+当前版本：**1.0.7**。适配基线：DeepSeek Harness 桌面版 **0.2.1-rc.2**。最新修复已构建，但尚未重新进行自动或桌面交互测试，详见 [验证状态](VALIDATION.md)。
 
 ## 功能
 
@@ -20,14 +20,14 @@
 
 ### 本地安装包
 
-1. [下载 dsh-claude-video-slider-1.0.6.tgz](https://github.com/Ledas-as/dsh-claude-video-slider/raw/refs/heads/main/packages/dsh-claude-video-slider-1.0.6.tgz)。
+1. [下载 dsh-claude-video-slider-1.0.7.tgz](https://github.com/Ledas-as/dsh-claude-video-slider/raw/refs/heads/main/packages/dsh-claude-video-slider-1.0.7.tgz)。
 2. 在 DSH 的插件管理中添加这个本地 `.tgz` 文件并启用插件。
 3. 正常退出并重新打开 DSH，使客户端载入新组件。点击输入框旁的推理等级打开滑块。
 
 也可以使用 Windows 桌面版自带 CLI；把安装包路径改成实际下载位置：
 
 ```powershell
-& "$env:LOCALAPPDATA\Programs\DeepSeek Harness\resources\runtime\cli\bin\dsh.cmd" plugin --profile desktop add 'C:\Plugins\dsh-claude-video-slider-1.0.6.tgz' --ignore-scripts
+& "$env:LOCALAPPDATA\Programs\DeepSeek Harness\resources\runtime\cli\bin\dsh.cmd" plugin --profile desktop add 'C:\Plugins\dsh-claude-video-slider-1.0.7.tgz' --ignore-scripts
 ```
 
 桌面版默认使用 `desktop` profile。安装包已包含构建入口，无需在本地包安装时运行构建脚本。
@@ -49,7 +49,7 @@ github:Ledas-as/dsh-claude-video-slider
 使用 Web UI 时，在启动 DSH 的环境中安装到对应 profile，例如：
 
 ```powershell
-dsh plugin --profile web add 'C:\Plugins\dsh-claude-video-slider-1.0.6.tgz' --ignore-scripts
+dsh plugin --profile web add 'C:\Plugins\dsh-claude-video-slider-1.0.7.tgz' --ignore-scripts
 ```
 
 然后重新启动该 Web 实例并刷新网页。自定义 profile 请替换示例中的 `web`。
@@ -92,6 +92,7 @@ npm pack --ignore-scripts
 
 | 版本 | 变化 |
 | --- | --- |
+| 1.0.7 | 保存中保持滑轨、按钮亮度和像素动画，避免切档时闪烁 |
 | 1.0.6 | 离开最高档渐退、残留像素收回、模型与档位文字过渡 |
 | 1.0.5 | 紫色像素按位置逐个点燃，向左蔓延约两秒 |
 | 1.0.4 | 滑轨悬停与拖动保持普通箭头指针 |

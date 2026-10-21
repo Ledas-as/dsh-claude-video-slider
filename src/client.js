@@ -8,7 +8,7 @@ function AnimatedLabel({ text, order = 0 }) {
   return h('dsh-claude-slider-label', { ref });
 }
 
-function EffortSlider({ steps, value, recommended, defaultActive, disabled, onChange }) {
+function EffortSlider({ steps, value, recommended, defaultActive, disabled, saving, onChange }) {
   const ref = React.useRef(null);
   const changeRef = React.useRef(onChange);
   changeRef.current = onChange;
@@ -16,10 +16,18 @@ function EffortSlider({ steps, value, recommended, defaultActive, disabled, onCh
     const element = ref.current;
     element.steps = steps;
     element.recommended = recommended;
+  }, [steps, recommended]);
+  React.useLayoutEffect(() => {
+    if (saving) return;
+    const element = ref.current;
     element.value = value;
     element.defaultActive = defaultActive;
+  }, [value, defaultActive, saving]);
+  React.useLayoutEffect(() => {
+    const element = ref.current;
+    element.toggleAttribute('saving', saving);
     element.disabled = disabled;
-  }, [steps, value, recommended, defaultActive, disabled]);
+  }, [saving, disabled]);
   React.useEffect(() => {
     const element = ref.current;
     const change = event => changeRef.current(event.detail.index);
@@ -143,7 +151,7 @@ function ModelControl({ available, locked, directory, load, select }) {
   const maximum = !defaultActive && steps.length > 1 && index === steps.length - 1;
   const message = error || state.error;
 
-  return h('div', { className: 'dsv-root', ref: root },
+  return h('div', { className: 'dsv-root', ref: root, 'data-saving': busy && !locked ? '' : undefined },
     h('button', {
       type: 'button', className: 'dsv-trigger', disabled,
       'aria-label': `选择模型，当前 ${modelName}`, 'aria-haspopup': 'dialog', 'aria-expanded': pane === 'model', 'aria-controls': pane === 'model' ? id : undefined,
@@ -156,7 +164,7 @@ function ModelControl({ available, locked, directory, load, select }) {
     }, h(AnimatedLabel, { text: effortLabel, order: index }), h('span', { 'aria-hidden': true, className: busy ? 'dsv-spinner' : 'dsv-chevron' }, busy ? '◌' : '⌄')),
     pane && h('div', { key: pane, id, ref: popup, popover: 'manual', role: 'dialog', 'aria-label': pane === 'effort' ? '推理等级' : '选择模型', 'aria-busy': busy, className: 'dsv-popup' + (pane === 'model' ? ' dsv-models' : '') },
       pane === 'effort' ? [
-        steps.length ? h(EffortSlider, { key: 'slider', steps, value: index, recommended, defaultActive, disabled, onChange: chooseEffort })
+        steps.length ? h(EffortSlider, { key: 'slider', steps, value: index, recommended, defaultActive, disabled, saving: busy && !locked, onChange: chooseEffort })
           : h('p', { key: 'empty', className: 'dsv-status' }, '当前模型没有声明可选推理等级。'),
         h('button', {
           key: 'default', type: 'button', className: 'dsv-default', disabled,
@@ -194,6 +202,7 @@ const css = `
 .dsv-trigger:hover,.dsv-trigger[aria-expanded=true]{background:var(--dsw-alias-bg-layer-2,#2b2b29);color:var(--dsw-alias-label-primary,#deddd8)}
 .dsv-trigger:focus-visible,.dsv-popup button:focus-visible{outline:2px solid #ada0df;outline-offset:2px}
 .dsv-trigger:disabled,.dsv-popup button:disabled{opacity:.45;cursor:default}
+.dsv-root[data-saving] .dsv-trigger:disabled,.dsv-root[data-saving] .dsv-popup button:disabled{opacity:1}
 .dsv-effort{display:flex;gap:6px;align-items:center;transition:color 160ms ease}.dsv-maximum{color:#a49bd7}.dsv-chevron{font-size:12px;color:#777772}.dsv-spinner{display:inline-block;animation:dsv-spin 900ms linear infinite}
 .dsv-popup{position:fixed;inset:auto;margin:0;box-sizing:border-box;width:220px;max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px);overflow:auto;border:1px solid #343432;border-radius:11px;background:#20201f;color:#c4c3c0;padding:12px 11px 10px;box-shadow:0 10px 26px #0005;font:13px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;z-index:1000;color-scheme:dark;animation:dsv-appear 130ms ease-out}
 .dsv-popup::backdrop{background:transparent}.dsv-popup dsh-claude-effort-slider{width:100%}
