@@ -4,7 +4,7 @@
 
 为 DSH 桌面端及 Web UI 提供模型选择与推理等级滑块，模仿参考视频中 Claude 的深色面板、白色滑块、档位文字过渡与紫色像素火焰。此项目是独立实现，不是 Anthropic / Claude 或 DeepSeek 的官方产品，与这些品牌无隶属关系。
 
-当前版本：**1.0.11**。适配基线：DeepSeek Harness 桌面版 **0.2.1-rc.2**。最新修复已构建，但尚未重新进行自动或桌面交互测试，详见 [验证状态](VALIDATION.md)。
+当前版本：**1.0.25**。适配基线：DeepSeek Harness 桌面版 **0.2.1-rc.2**。最新修复已构建，但尚未重新进行自动或桌面交互测试，详见 [验证状态](VALIDATION.md)。
 
 ## 功能
 
@@ -20,14 +20,14 @@
 
 ### 本地安装包
 
-1. [下载 dsh-claude-video-slider-1.0.11.tgz](packages/dsh-claude-video-slider-1.0.11.tgz)。
+1. [下载 dsh-claude-video-slider-1.0.25.tgz](packages/dsh-claude-video-slider-1.0.25.tgz)。
 2. 在 DSH 的插件管理中添加这个本地 `.tgz` 文件并启用插件。
 3. 正常退出并重新打开 DSH，使客户端载入新组件。点击输入框旁的推理等级打开滑块。
 
 也可以使用 Windows 桌面版自带 CLI；把安装包路径改成实际下载位置：
 
 ```powershell
-& "$env:LOCALAPPDATA\Programs\DeepSeek Harness\resources\runtime\cli\bin\dsh.cmd" plugin --profile desktop add 'C:\Plugins\dsh-claude-video-slider-1.0.11.tgz' --ignore-scripts
+& "$env:LOCALAPPDATA\Programs\DeepSeek Harness\resources\runtime\cli\bin\dsh.cmd" plugin --profile desktop add 'C:\Plugins\dsh-claude-video-slider-1.0.25.tgz' --ignore-scripts
 ```
 
 桌面版默认使用 `desktop` profile。安装包已包含构建入口，无需在本地包安装时运行构建脚本。
@@ -49,7 +49,7 @@ github:Ledas-as/dsh-claude-video-slider
 使用 Web UI 时，在启动 DSH 的环境中安装到对应 profile，例如：
 
 ```powershell
-dsh plugin --profile web add 'C:\Plugins\dsh-claude-video-slider-1.0.11.tgz' --ignore-scripts
+dsh plugin --profile web add 'C:\Plugins\dsh-claude-video-slider-1.0.25.tgz' --ignore-scripts
 ```
 
 然后重新启动该 Web 实例并刷新网页。自定义 profile 请替换示例中的 `web`。
@@ -79,6 +79,7 @@ npm pack --ignore-scripts
 ```
 
 - `src/slider.js`：滑块、像素动画及文字过渡组件。
+- `src/pixel-motion.js`：根据参考片段逐格取色生成的数值曲线；包含短暂的首尾衔接，不包含录屏图像。
 - `src/client.js`：DSH / React 接入层。
 - `lib/client.js`：预构建的 ModuleLoader 入口。
 - `index.js`、`cordis.patch.yml`：Host 伴随入口与插件注册。
@@ -91,6 +92,20 @@ npm pack --ignore-scripts
 
 | 版本 | 变化 |
 | --- | --- |
+| 1.0.25 | 细调网格：亮区占每格节距的 75%，四边各留 12.5%，横竖暗缝保持同一比例 |
+| 1.0.24 | 待机基础速度降为 0.8 倍，各格错相混合不同节奏的颜色曲线，减轻短循环的重复感 |
+| 1.0.23 | 使用持续变化的曲线重叠衔接循环，取消 30fps 刷新限制，跳过未变色格子的写入 |
+| 1.0.22 | 按原视频 5～7 秒的 114 个源帧重建逐格颜色曲线，按截图比例固定暗缝并限制填色范围 |
+| 1.0.21 | 网格与格内布局完整恢复为 1.0.11，仅保留新的颜色变化逻辑 |
+| 1.0.20 | 恢复 1.0.11 的网格间距及展开基础，仅沿用 1.0.17 的局部换色，并保留柔和渐变与格内填色约束 |
+| 1.0.19 | 加宽像素间隙并限制格内填色，略微增强色块对比，保留柔和换色 |
+| 1.0.18 | 延长待机颜色渐变、放慢换色节奏并降低明暗差，减轻闪动感 |
+| 1.0.17 | 以 1.0.11 为基础，对照原视频末段逐格取色，待机改为稳定紫色色相、短暂停留与局部亮度变换 |
+| 1.0.16 | 像素火焰改为逐帧热量传播、邻格扩散与衰减，替代循环透明度闪烁 |
+| 1.0.15 | 恢复 1.0.11 动效基础，对照原视频改为固定网格上的成片明暗流动，移除增强版晃动与光晕 |
+| 1.0.14 | 折中动效强度：中等幅度像素晃动和明暗起伏、柔和点燃弹动，无外圈光晕 |
+| 1.0.13 | 降低动效强度，移除光晕和大幅弹动，待机改为缓慢明暗起伏与极轻微位移 |
+| 1.0.12 | 增强最高档逐格点燃的亮度与弹动、待机像素晃动和紫色光晕 |
 | 1.0.11 | 打开面板直接显示已保存最高档的紫色色块并保留闪动，仅手动调入最高档播放蔓延 |
 | 1.0.10 | 移除滑块下方重复的“默认档位”文字，保留 Recommended 按钮 |
 | 1.0.9 | 将恢复模型默认的按钮改名为 Recommended |

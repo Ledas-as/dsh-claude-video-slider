@@ -1,7 +1,7 @@
-/* Standalone visual component. No framework, assets, network requests or timers. */
+/* Visual component with bundled numeric motion curves. No network requests. */
 (() => {
   const tag = 'dsh-claude-effort-slider';
-  const pluginVersion = '1.0.11';
+  const pluginVersion = '1.0.25';
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const fallbackSteps = ['Low', 'Medium', 'High', 'Extra', 'Max', 'Ultracode']
     .map(label => ({ id: label.toLowerCase(), label }));
@@ -63,8 +63,17 @@
   if (!customElements.get('dsh-claude-slider-label')) customElements.define('dsh-claude-slider-label', ClaudeSliderLabel);
   if (customElements.get(tag)) return;
 
+  const motion = claudeSliderPixelMotion;
+  const motionColors = Uint8Array.from(atob(motion.rgb), character => character.charCodeAt(0));
+  const motionOrigin = performance.now();
+  const cellTiming = Array.from({ length: motion.columns * motion.rows }, () => ({
+    phase: Math.random() * motion.duration,
+    secondaryPhase: Math.random() * motion.duration,
+    rate: .96 + Math.random() * .08,
+  }));
+
   class ClaudeEffortSlider extends HTMLElement {
-    static observedAttributes = ['disabled', 'label', 'axis-low', 'axis-high'];
+    static observedAttributes = ['disabled', 'saving', 'label', 'axis-low', 'axis-high'];
 
     constructor() {
       super();
@@ -74,6 +83,15 @@
       this._recommended = 1;
       this._defaultActive = false;
       this._drag = null;
+      this._pixelFrame = 0;
+      this._pixelColors = [];
+      this._motionPreference = matchMedia('(prefers-reduced-motion: reduce)');
+      this._syncPixelState = () => this._syncPixels();
+      this._pixelTick = time => {
+        this._pixelFrame = 0;
+        this._drawPixelColors(time);
+        this._pixelFrame = requestAnimationFrame(this._pixelTick);
+      };
       this.shadowRoot.innerHTML = `
         <style>
           :host{display:block;box-sizing:border-box;width:220px;color:#c4c3c0;font:13px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color-scheme:dark;--position:.2;--surface:#20201f;--track:#30302f;--muted:#81817d;--accent:#a49bd7}
@@ -107,23 +125,21 @@
           .track.dragging .fill{transition:opacity 260ms ease}
           .track.dragging .thumb{transition:none}
           .track.dragging .thumb{width:17px}
-          .pixels{position:absolute;inset:1px 2px;z-index:1;overflow:hidden;border-radius:5px;opacity:0;pointer-events:none;mask-image:linear-gradient(90deg,transparent,#000 65%);clip-path:inset(0 calc((100% - 12px)*(1 - var(--position))) 0 0);transition:opacity 320ms cubic-bezier(.22,.61,.36,1),clip-path 210ms cubic-bezier(.22,1.35,.36,1)}
+          .pixels{position:absolute;inset:0 2px;z-index:1;overflow:hidden;border-radius:5px;opacity:0;pointer-events:none;clip-path:inset(0 calc((100% - 12px)*(1 - var(--position))) 0 0);transition:opacity 320ms cubic-bezier(.22,.61,.36,1),clip-path 210ms cubic-bezier(.22,1.35,.36,1)}
           .track.dragging .pixels{transition-property:opacity}
-          .cells{display:grid;grid-template-columns:repeat(48,1fr);grid-template-rows:repeat(5,1fr);gap:1px;width:100%;height:100%}
-          .pixel{border-radius:.35px;opacity:0;transform:scale(.35)}
-          .pixel::before{content:"";display:block;width:100%;height:100%;background:#aaa0df;border-radius:inherit;opacity:var(--opacity);animation:flicker var(--duration) ease-in-out var(--delay) infinite alternate;animation-play-state:paused}
+          .cells{display:grid;grid-template-columns:repeat(48,minmax(0,1fr));grid-template-rows:repeat(5,minmax(0,1fr));gap:0;width:100%;height:100%}
+          .pixel{position:relative;display:block;min-width:0;min-height:0;overflow:hidden;border-radius:.35px;opacity:0;transform:scale(.35)}
+          .pixel::before{content:"";position:absolute;inset:12.5%;display:block;background:var(--pixel-color,#30302f);border-radius:inherit}
           .maximum .pixels{opacity:1;transition-duration:160ms,210ms}
           .burning .pixel{animation:ignite var(--ignite-duration) ease-out var(--ignite-delay) both;animation-play-state:paused}
           .burning.settled .pixel{animation:none;opacity:1;transform:scale(1)}
           .maximum.settled .pixels{transition:none}
           .maximum .pixel{animation-play-state:running}
-          .burning .pixel::before{animation-play-state:running}
           .maximum .fill{opacity:0}
           .maximum .value{color:var(--accent)}
           :host([disabled]:not([saving])) .track{opacity:.42}
           :host([disabled]:not([saving])) .pixel,:host([disabled]:not([saving])) .pixel::before{animation-play-state:paused}
           @keyframes ignite{from{opacity:0;transform:scale(.35)}to{opacity:1;transform:scale(1)}}
-          @keyframes flicker{from{opacity:var(--opacity)}to{opacity:var(--bright)}}
           @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}.maximum .pixel{opacity:1;transform:none}}
         </style>
         <div class="panel">
@@ -149,6 +165,7 @@
       this._pixels.addEventListener('transitionend', event => {
         if (event.target === this._pixels && event.propertyName === 'opacity' && !this._panel.classList.contains('maximum')) {
           this._panel.classList.remove('burning', 'settled');
+          this._syncPixels();
         }
       });
       this._help = find('.help');
@@ -172,10 +189,12 @@
           + Math.abs(row - 2) * 26 + Math.sin(column * .8 + row * 1.7) * 40 + seed * 70);
         const pixel = document.createElement('span');
         pixel.className = 'pixel';
-        pixel.style.cssText = `--opacity:${.16 + seed * .23};--bright:${.42 + seed * .46};--duration:${650 + seed * 1250}ms;--delay:${-index * 37}ms;--ignite-delay:${ignition}ms;--ignite-duration:${180 + seed * 160}ms`;
+        pixel.style.cssText = `--ignite-delay:${ignition}ms;--ignite-duration:${180 + seed * 160}ms`;
         fragment.append(pixel);
       }
       cells.append(fragment);
+      this._pixelCells = Array.from(cells.children);
+      this._drawPixelColors(performance.now());
       this._track.addEventListener('pointerdown', event => this._start(event));
       this._track.addEventListener('pointermove', event => this._move(event));
       this._track.addEventListener('pointerup', event => this._finish(event));
@@ -187,10 +206,64 @@
       this._paint(this._value);
     }
 
-    connectedCallback() { this._syncAttributes(); }
-    disconnectedCallback() { this._cancel(); }
+    connectedCallback() {
+      document.addEventListener('visibilitychange', this._syncPixelState);
+      this._motionPreference.addEventListener('change', this._syncPixelState);
+      this._syncAttributes();
+    }
+    disconnectedCallback() {
+      this._cancel();
+      document.removeEventListener('visibilitychange', this._syncPixelState);
+      this._motionPreference.removeEventListener('change', this._syncPixelState);
+      this._syncPixels();
+    }
     attributeChangedCallback() { this._syncAttributes(); }
     focus(options) { this._track.focus(options); }
+
+    _drawPixelColors(time) {
+      // Offset and mix two continuous curves per cell so the field does not
+      // visibly reset together. Keep timing outside the popup lifecycle.
+      const elapsed = (time - motionOrigin) * .8;
+      const stride = motion.columns * motion.rows * 3;
+      this._pixelCells.forEach((pixel, index) => {
+        const timing = cellTiming[index];
+        const position = ((elapsed * timing.rate + timing.phase) % motion.duration) / motion.duration * (motion.frames - 1);
+        const secondary = ((elapsed * timing.rate * .754877666 + timing.secondaryPhase) % motion.duration) / motion.duration * (motion.frames - 1);
+        const frame = Math.floor(position);
+        const secondaryFrame = Math.floor(secondary);
+        const blend = position - frame;
+        const secondaryBlend = secondary - secondaryFrame;
+        const offset = index * 3;
+        const channel = component => {
+          const current = motionColors[frame * stride + offset + component];
+          const next = motionColors[(frame + 1) * stride + offset + component];
+          const secondaryCurrent = motionColors[secondaryFrame * stride + offset + component];
+          const secondaryNext = motionColors[(secondaryFrame + 1) * stride + offset + component];
+          return Math.round((current + (next - current) * blend) * .7
+            + (secondaryCurrent + (secondaryNext - secondaryCurrent) * secondaryBlend) * .3);
+        };
+        const color = `rgb(${channel(0)} ${channel(1)} ${channel(2)})`;
+        if (this._pixelColors[index] !== color) {
+          pixel.style.setProperty('--pixel-color', color);
+          this._pixelColors[index] = color;
+        }
+      });
+    }
+
+    _syncPixels() {
+      if (!this._pixelCells) return;
+      if (this._motionPreference.matches && !this._panel.classList.contains('maximum')) {
+        this._panel.classList.remove('burning', 'settled');
+      }
+      const running = this._panel.classList.contains('burning') && this.isConnected
+        && !document.hidden && !this._motionPreference.matches && (!this.disabled || this.hasAttribute('saving'));
+      if (running && !this._pixelFrame) {
+        this._pixelFrame = requestAnimationFrame(this._pixelTick);
+      } else if (!running) {
+        cancelAnimationFrame(this._pixelFrame);
+        this._pixelFrame = 0;
+      }
+    }
 
     _showInfo(open) {
       this._info.hidden = !open;
@@ -244,6 +317,7 @@
         ['.label', 'label', 'Effort'], ['.axis-low', 'axis-low', 'Faster'],
         ['.axis-high', 'axis-high', 'Smarter'],
       ]) this.shadowRoot.querySelector(selector).textContent = this.getAttribute(attribute) ?? fallback;
+      this._syncPixels();
     }
 
     _drawTicks() {
@@ -272,6 +346,7 @@
         this._panel.classList.remove('burning', 'settled');
       }
       this._panel.classList.toggle('maximum', maximum);
+      this._syncPixels();
       this._title.setLabel(label, index);
       this._track.setAttribute('aria-valuemin', '0');
       this._track.setAttribute('aria-valuemax', String(this._steps.length - 1));

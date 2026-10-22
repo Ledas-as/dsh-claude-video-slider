@@ -4,6 +4,11 @@ This unofficial plugin imitates Claude UI appearance and motion shown in a
 reference video. It is an independent DeepSeek Harness plugin, not an official
 Anthropic / Claude or DeepSeek product. The reference recording is not included.
 
+The bundled src/pixel-motion.js contains numeric cell-color curves sampled from
+the user-supplied 5-7 second reference excerpt. It contains no recording frames,
+pointer imagery, conversation text, or external file paths. Curves are lightly
+smoothed and blended at the loop boundary to support continuous playback.
+
 DSH registration and model-directory integration follow published patterns in:
 
 - https://github.com/MEMZ-JZY/DSH-Claude-Style-Reasoning-Slider
