@@ -1,6 +1,6 @@
 {
   "name": "dsh-claude-video-slider",
-  "version": "1.0.25",
+  "version": "1.0.26",
   "description": "Unofficial DeepSeek Harness plugin imitating Claude UI with animated model and reasoning-effort controls.",
   "type": "module",
   "license": "MIT",
@@ -21,7 +21,6 @@
   "files": ["index.js", "cordis.patch.yml", "lib/", "src/", "demo/", "scripts/", "README.md", "VALIDATION.md", "LICENSE", "THIRD_PARTY_NOTICES.md"],
   "scripts": {
     "build": "node scripts/build.mjs",
-    "prepare": "node scripts/build.mjs",
     "check": "node --check src/slider.js && node --check lib/client.js && node --check index.js"
   },
   "dsh": {

@@ -1,7 +1,7 @@
 /* Visual component with bundled numeric motion curves. No network requests. */
 (() => {
   const tag = 'dsh-claude-effort-slider';
-  const pluginVersion = '1.0.25';
+  const pluginVersion = '1.0.26';
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const fallbackSteps = ['Low', 'Medium', 'High', 'Extra', 'Max', 'Ultracode']
     .map(label => ({ id: label.toLowerCase(), label }));

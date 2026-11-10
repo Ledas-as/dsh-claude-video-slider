@@ -4,7 +4,7 @@
 
 为 DSH 桌面端及 Web UI 提供模型选择与推理等级滑块，模仿参考视频中 Claude 的深色面板、白色滑块、档位文字过渡与紫色像素火焰。此项目是独立实现，不是 Anthropic / Claude 或 DeepSeek 的官方产品，与这些品牌无隶属关系。
 
-当前版本：**1.0.25**。适配基线：DeepSeek Harness 桌面版 **0.2.1-rc.2**。最新修复已构建，但尚未重新进行自动或桌面交互测试，详见 [验证状态](VALIDATION.md)。
+当前版本：**1.0.26**。适配基线：DeepSeek Harness 桌面版 **0.2.1-rc.2**。最新修复已构建，但尚未重新进行自动或桌面交互测试，详见 [验证状态](VALIDATION.md)。
 
 ## 效果预览
 
@@ -24,14 +24,14 @@
 
 ### 本地安装包
 
-1. [下载 dsh-claude-video-slider-1.0.25.tgz](packages/dsh-claude-video-slider-1.0.25.tgz)。
+1. [下载 dsh-claude-video-slider-1.0.26.tgz](packages/dsh-claude-video-slider-1.0.26.tgz)。
 2. 在 DSH 的插件管理中添加这个本地 `.tgz` 文件并启用插件。
 3. 正常退出并重新打开 DSH，使客户端载入新组件。点击输入框旁的推理等级打开滑块。
 
 也可以使用 Windows 桌面版自带 CLI；把安装包路径改成实际下载位置：
 
 ```powershell
-& "$env:LOCALAPPDATA\Programs\DeepSeek Harness\resources\runtime\cli\bin\dsh.cmd" plugin --profile desktop add 'C:\Plugins\dsh-claude-video-slider-1.0.25.tgz' --ignore-scripts
+& "$env:LOCALAPPDATA\Programs\DeepSeek Harness\resources\runtime\cli\bin\dsh.cmd" plugin --profile desktop add 'C:\Plugins\dsh-claude-video-slider-1.0.26.tgz' --ignore-scripts
 ```
 
 桌面版默认使用 `desktop` profile。安装包已包含构建入口，无需在本地包安装时运行构建脚本。
@@ -44,7 +44,7 @@
 github:Ledas-as/dsh-claude-video-slider
 ```
 
-这种方式需要本机安装 Git 且可以访问 GitHub；地址安装仓库默认分支的内容。
+这种方式需要本机安装 Git 且可以访问 GitHub；地址安装仓库默认分支的内容。仓库已附带构建产物，1.0.26 起移除 `prepare` 自动构建脚本，安装时直接使用现成文件，无需允许本插件运行构建脚本。
 
 如果启用了其他替换模型选择器的插件，建议在插件管理中只保留一个启用，以免争用同一个 DSH 控件位置。若遇到 `profile reload requires the root Include entry`，正常退出并重新打开 DSH 后再查看。
 
@@ -53,7 +53,7 @@ github:Ledas-as/dsh-claude-video-slider
 使用 Web UI 时，在启动 DSH 的环境中安装到对应 profile，例如：
 
 ```powershell
-dsh plugin --profile web add 'C:\Plugins\dsh-claude-video-slider-1.0.25.tgz' --ignore-scripts
+dsh plugin --profile web add 'C:\Plugins\dsh-claude-video-slider-1.0.26.tgz' --ignore-scripts
 ```
 
 然后重新启动该 Web 实例并刷新网页。自定义 profile 请替换示例中的 `web`。
@@ -90,12 +90,13 @@ npm pack --ignore-scripts
 - `demo/index.html`：独立演示。
 - `packages/`：可直接下载的安装包。
 
-修改组件后请重新构建，并重新打开 DSH 加载；旧客户端窗口中已经注册的 Web Component 不会自动替换。
+修改组件后请手动运行 `npm run build`，将更新后的 `lib/client.js` 一同提交或打包，再重新打开 DSH 加载。安装和打包不会自动构建；旧客户端窗口中已经注册的 Web Component 不会自动替换。
 
 ## 版本记录
 
 | 版本 | 变化 |
 | --- | --- |
+| 1.0.26 | 移除安装时的自动构建入口，直接使用预构建产物，避免 Git 安装触发构建授权及准备失败 |
 | 1.0.25 | 细调网格：亮区占每格节距的 75%，四边各留 12.5%，横竖暗缝保持同一比例 |
 | 1.0.11 | 打开面板直接显示已保存最高档的紫色色块并保留闪动，仅手动调入最高档播放蔓延 |
 | 1.0.10 | 移除滑块下方重复的“默认档位”文字，保留 Recommended 按钮 |
