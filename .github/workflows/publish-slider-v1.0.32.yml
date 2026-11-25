@@ -1,0 +1,25 @@
+name: Publish slider v1.0.32
+on:
+  push:
+    branches: [publish-v1.0.32]
+permissions:
+  contents: write
+jobs:
+  publish:
+    if: github.repository == 'Ledas-as/dsh-claude-video-slider'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify and publish prebuilt package
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          asset=dsh-claude-video-slider-1.0.32.tgz
+          commit=b2f5596b27e11aeb08857ace428ea0d783ac8885
+          curl --fail --silent --show-error --location --retry 2 --max-time 30 \
+            "https://raw.githubusercontent.com/Ledas-as/dsh-claude-video-slider/$commit/packages/$asset" -o "$asset"
+          echo "b7e07fe6f6ef89cc171774f3c6af0fa1e8cb659873a5d2c96e846d97164e69fd  $asset" | sha256sum --check
+          gh release create v1.0.32 "$asset" --repo Ledas-as/dsh-claude-video-slider \
+            --target "$commit" --title 'v1.0.32' \
+            --notes 'DSH 预构建安装包，包含 Ultra 档及问号卡片动画。安装时直接使用构建产物。'
