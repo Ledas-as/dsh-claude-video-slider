@@ -1,10 +1,10 @@
 /* Visual component with bundled numeric motion curves. No network requests. */
 (() => {
   const tag = 'dsh-claude-effort-slider';
-  const pluginVersion = '1.0.26';
+  const pluginVersion = '1.0.32';
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
-  const fallbackSteps = ['Low', 'Medium', 'High', 'Extra', 'Max', 'Ultracode']
-    .map(label => ({ id: label.toLowerCase(), label }));
+  const fallbackSteps = ['Low', 'Medium', 'High', 'Extra', 'Max', 'Ultra']
+    .map(label => ({ id: label.toLowerCase(), label, accent: label === 'Ultra' }));
 
   class ClaudeSliderLabel extends HTMLElement {
     constructor() {
@@ -98,15 +98,20 @@
           *,*::before,*::after{box-sizing:border-box}
           .panel{padding:12px 11px 10px;background:var(--surface);border:1px solid #343432;border-radius:11px;box-shadow:0 10px 26px #0005}
           :host([inline]) .panel{padding:0;background:none;border:0;border-radius:0;box-shadow:none}
-          .heading{display:flex;align-items:center;gap:8px;min-height:18px;margin-bottom:20px;white-space:nowrap}
+          .heading{position:relative;display:flex;align-items:center;gap:8px;min-height:18px;margin-bottom:20px;white-space:nowrap}
           .label{color:var(--muted)}
           .value{font-weight:400;transition:color 160ms ease}
           .help{margin-left:auto;color:var(--muted);width:20px;height:18px;border:0;padding:0;background:none;display:grid;place-items:center;cursor:pointer}
           .help span{width:12px;height:12px;border:1px solid currentColor;border-radius:50%;display:grid;place-items:center;font-size:9px;line-height:1}
           .help:hover,.help[aria-expanded=true]{color:#c4c3c0}
           .help:focus-visible,.info-close:focus-visible{outline:2px solid #b4a6e4;outline-offset:3px;border-radius:4px}
-          .info{margin-top:12px;padding-top:11px;border-top:1px solid #ffffff18;font-size:11px;line-height:1.7;color:#a3a29a}
-          .info[hidden]{display:none}
+          .ultra-hint{position:absolute;inset:20px 0 auto;z-index:1;padding:4px 8px;border:1px solid #a49bd750;border-radius:7px;background:#2b2731;color:#cdc4e7;font-size:11px;line-height:1.45;white-space:normal;opacity:0;pointer-events:none;transform-origin:calc(100% - 10px) -11px}
+          .ultra-hint strong{font-weight:600}
+          .info{display:grid;grid-template-rows:0fr;transition:grid-template-rows 200ms cubic-bezier(.25,.8,.3,1)}
+          .info:not([inert]){grid-template-rows:1fr}
+          .info-content{min-height:0;overflow:hidden}
+          .info-card{margin-top:12px;padding:9px 10px;border:1px solid #ffffff20;border-radius:8px;background:#282629;font-size:11px;line-height:1.6;color:#aaa7ac;opacity:0;transform:translateY(-5px) scale(.94);transform-origin:calc(100% - 10px) top;transition:opacity 150ms ease,transform 200ms cubic-bezier(.25,.8,.3,1)}
+          .info:not([inert]) .info-card{opacity:1;transform:none}
           .info-heading{display:flex;align-items:center;gap:8px;color:#d2d0c8;font-size:12px}
           .info-heading strong{font-weight:500}
           .info-close{margin-left:auto;border:0;background:none;padding:0 3px;color:var(--muted);font:inherit;font-size:16px;line-height:1.2;cursor:pointer}
@@ -143,17 +148,22 @@
           @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}.maximum .pixel{opacity:1;transform:none}}
         </style>
         <div class="panel">
-          <div class="heading"><span class="label">Effort</span><dsh-claude-slider-label class="value"></dsh-claude-slider-label><button class="help" type="button" title="插件信息" aria-label="插件信息" aria-expanded="false" aria-controls="plugin-info"><span aria-hidden="true">?</span></button></div>
+          <div class="heading"><span class="label">Effort</span><dsh-claude-slider-label class="value"></dsh-claude-slider-label><button class="help" type="button" title="插件信息" aria-label="插件信息" aria-expanded="false" aria-controls="plugin-info"><span aria-hidden="true">?</span></button>
+            <div class="ultra-hint" aria-hidden="true"><strong>Ultra 已开启</strong> · 可能多用 token<br>深入分析与子代理复核</div>
+          </div>
           <div class="axis"><span class="axis-low">Faster</span><span class="axis-high">Smarter</span></div>
           <div class="track" role="slider" tabindex="0" aria-label="Reasoning effort" aria-orientation="horizontal">
             <div class="fill"></div><div class="pixels" aria-hidden="true"><div class="cells"></div></div>
             <div class="ticks" aria-hidden="true"></div><div class="thumb" aria-hidden="true"></div>
           </div>
-          <section class="info" id="plugin-info" aria-label="插件信息" hidden>
-            <div class="info-heading"><strong>DSH Claude 视频滑块</strong><button class="info-close" type="button" aria-label="关闭插件信息" title="关闭">×</button></div>
-            <span class="info-version">v${pluginVersion}</span>
-            <p>Claude 风格的模型与推理等级选择器，支持滑块吸附与最高档紫色像素动画。可选档位由当前模型提供。</p>
-            <code class="info-id">dsh-claude-video-slider</code>
+          <section class="info" id="plugin-info" aria-label="插件信息" inert>
+            <div class="info-content"><div class="info-card">
+              <div class="info-heading"><strong>DSH Claude 视频滑块</strong><button class="info-close" type="button" aria-label="关闭插件信息" title="关闭">×</button></div>
+              <span class="info-version">v${pluginVersion}</span>
+              <p class="ultra-details" hidden>Ultra 已开启 · 深入分析与子代理复核，可能使用更多 token。</p>
+              <p>Claude 风格的模型与推理等级选择器，支持滑块吸附与 Ultra 档紫色像素动画。原生档位由当前模型提供。</p>
+              <code class="info-id">dsh-claude-video-slider</code>
+            </div></div>
           </section>
         </div>`;
       const find = selector => this.shadowRoot.querySelector(selector);
@@ -170,10 +180,12 @@
       });
       this._help = find('.help');
       this._info = find('.info');
-      this._help.addEventListener('click', () => this._showInfo(this._info.hidden));
+      this._ultraHint = find('.ultra-hint');
+      this._ultraDetails = find('.ultra-details');
+      this._help.addEventListener('click', () => this._showInfo(this._info.inert));
       find('.info-close').addEventListener('click', () => this._showInfo(false));
       this.shadowRoot.addEventListener('keydown', event => {
-        if (event.key !== 'Escape' || this._info.hidden || this._drag) return;
+        if (event.key !== 'Escape' || this._info.inert || this._drag) return;
         event.preventDefault();
         event.stopPropagation();
         this._showInfo(false);
@@ -213,6 +225,7 @@
     }
     disconnectedCallback() {
       this._cancel();
+      this._ultraHintAnimation?.cancel();
       document.removeEventListener('visibilitychange', this._syncPixelState);
       this._motionPreference.removeEventListener('change', this._syncPixelState);
       this._syncPixels();
@@ -266,9 +279,29 @@
     }
 
     _showInfo(open) {
-      this._info.hidden = !open;
+      if (open) this._ultraHintAnimation?.cancel();
+      this._info.inert = !open;
       this._help.setAttribute('aria-expanded', String(open));
       if (!open) this._help.focus({ preventScroll: true });
+    }
+
+    set ultraActive(active) {
+      this._ultraDetails.hidden = !active;
+      if (!active) this._ultraHintAnimation?.cancel();
+    }
+
+    showUltraHint() {
+      if (!this.isConnected || !this._info.inert) return;
+      this._ultraHintAnimation?.cancel();
+      const still = this._motionPreference.matches;
+      const hidden = { opacity: 0, transform: still ? 'none' : 'scale(.06)' };
+      const visible = { opacity: 1, transform: still ? 'none' : 'scale(1)' };
+      this._ultraHintAnimation = this._ultraHint.animate([
+        { ...hidden, easing: 'cubic-bezier(.2,.8,.3,1)' },
+        { ...visible, offset: .09 },
+        { ...visible, offset: .88, easing: 'cubic-bezier(.5,0,.8,1)' },
+        hidden,
+      ], { duration: 2800 });
     }
 
     get steps() { return this._steps.map(step => ({ ...step })); }
@@ -276,7 +309,7 @@
       if (!Array.isArray(value) || !value.length) return;
       const ids = new Set();
       const steps = value.filter(step => step && typeof step.id === 'string' && !ids.has(step.id) && ids.add(step.id))
-        .map(step => ({ id: step.id, label: String(step.label ?? step.name ?? step.id) }));
+        .map(step => ({ id: step.id, label: String(step.label ?? step.name ?? step.id), accent: step.accent === true }));
       if (!steps.length) return;
       this._cancel();
       this._steps = steps;
@@ -332,7 +365,7 @@
 
     _paint(position, preview = false, animate = preview) {
       const index = clamp(Math.round(position), 0, this._steps.length - 1);
-      const maximum = index === this._steps.length - 1 && this._steps.length > 1 && (!this._defaultActive || preview);
+      const maximum = this._steps[index].accent && (!this._defaultActive || preview);
       const label = this._defaultActive && !preview ? 'Default' : this._steps[index].label;
       this._panel.style.setProperty('--position', position / Math.max(1, this._steps.length - 1));
       if (maximum) {

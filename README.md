@@ -4,34 +4,35 @@
 
 为 DSH 桌面端及 Web UI 提供模型选择与推理等级滑块，模仿参考视频中 Claude 的深色面板、白色滑块、档位文字过渡与紫色像素火焰。此项目是独立实现，不是 Anthropic / Claude 或 DeepSeek 的官方产品，与这些品牌无隶属关系。
 
-当前版本：**1.0.26**。适配基线：DeepSeek Harness 桌面版 **0.2.1-rc.2**。最新修复已构建，但尚未重新进行自动或桌面交互测试，详见 [验证状态](VALIDATION.md)。
+当前版本：**1.0.32**。Ultra 依据 DeepSeek Harness 桌面版 **0.2.2-rc.1** 的宿主接口实现，详见 [验证状态](VALIDATION.md)。
 
 ## 效果预览
 
-![DSH Claude UI 风格推理强度滑块](docs/images/slider-preview.png)
+![1.0.25 版的紫色粒子效果](docs/images/slider-preview.png)
 
 ## 功能
 
 - 模型与推理等级使用独立按钮，读取 DSH 当前会话的真实可用模型及档位。
 - 拖动时连续预览，松手吸附并保存一次；支持方向键、Home、End、PageUp、PageDown。
-- 最高可用档位显示紫色像素火焰：从白色滑块旁向左逐渐蔓延，随后持续明暗变化。
-- 从最高档往回拖时，残留像素跟随滑块收回，并逐渐淡出。
+- 只有 Ultra 档显示紫色像素火焰，从白色滑块旁向左蔓延，随后持续明暗变化。
+- 离开 Ultra 时，残留像素跟随滑块收回，并逐渐淡出。
+- 支持 Max 的 DeepSeek 模型可选 **Ultra**，在 Max 基础上为当前会话加上深入分析和并行复核的提示。
 - 档位文字以轻微滑动、模糊和淡入淡出切换，增减档时方向相反。
-- 点击右上角 `?` 查看插件名称、版本与功能说明。
+- 切到 Ultra 后，状态提示在滑块上方短暂弹出，再缩回右上角 `?`。点击问号会展开独立的信息卡片，显示插件信息和当前 Ultra 说明。
 - 滑轨与拖动过程保持普通鼠标箭头；支持 `prefers-reduced-motion`。
 
 ## 安装到 DSH 桌面端
 
 ### 本地安装包
 
-1. [下载 dsh-claude-video-slider-1.0.26.tgz](packages/dsh-claude-video-slider-1.0.26.tgz)。
+1. [下载 dsh-claude-video-slider-1.0.32.tgz](packages/dsh-claude-video-slider-1.0.32.tgz)。
 2. 在 DSH 的插件管理中添加这个本地 `.tgz` 文件并启用插件。
 3. 正常退出并重新打开 DSH，使客户端载入新组件。点击输入框旁的推理等级打开滑块。
 
 也可以使用 Windows 桌面版自带 CLI；把安装包路径改成实际下载位置：
 
 ```powershell
-& "$env:LOCALAPPDATA\Programs\DeepSeek Harness\resources\runtime\cli\bin\dsh.cmd" plugin --profile desktop add 'C:\Plugins\dsh-claude-video-slider-1.0.26.tgz' --ignore-scripts
+& "$env:LOCALAPPDATA\Programs\DeepSeek Harness\resources\runtime\cli\bin\dsh.cmd" plugin --profile desktop add 'C:\Plugins\dsh-claude-video-slider-1.0.32.tgz' --ignore-scripts
 ```
 
 桌面版默认使用 `desktop` profile。安装包已包含构建入口，无需在本地包安装时运行构建脚本。
@@ -53,20 +54,22 @@ github:Ledas-as/dsh-claude-video-slider
 使用 Web UI 时，在启动 DSH 的环境中安装到对应 profile，例如：
 
 ```powershell
-dsh plugin --profile web add 'C:\Plugins\dsh-claude-video-slider-1.0.26.tgz' --ignore-scripts
+dsh plugin --profile web add 'C:\Plugins\dsh-claude-video-slider-1.0.32.tgz' --ignore-scripts
 ```
 
 然后重新启动该 Web 实例并刷新网页。自定义 profile 请替换示例中的 `web`。
 
 ## 独立预览
 
-下载并解压仓库源码，双击 `demo/index.html` 即可体验，无需连接模型服务。点击 `Ultracode ↗` 查看最高档动画，也可以切换三档演示模型。
+下载并解压仓库源码，双击 `demo/index.html` 即可体验，无需连接模型服务。点击 `Ultra ↗` 查看粒子效果，也可以切换到只有原生档位的三档演示。
 
-演示中的 `Opus 5.5`、六档名称及 `Ultracode` 仅用于模仿视频，不代表提供或接入这些模型。正式插件始终使用当前模型实际公开的名称和档位。
+演示中的 `Opus 5.5` 和档位仅用于预览视觉效果。正式插件的原生档位来自当前模型，Ultra 需要 DSH 宿主。
 
 ## 档位与保存
 
-- 档位来自当前模型的 `reasoning.efforts`；最高可用档位显示紫色动画，不会为模型添加虚构参数。
+- 原生档位来自当前模型的 `reasoning.efforts`。
+- Ultra 只出现在提供 `max` 的 DeepSeek 模型上，底层仍使用 `max`。选中后，DSH 在模型请求里加入会话运行上下文，要求用足现有预算、按需并行调用子代理，并复核结果。额度、权限与可用工具由宿主管理。
+- Ultra 设置仅在当前运行的会话中有效。改选普通档位或模型会退出 Ultra，宿主重启后需要重新选择。不支持该会话接口的宿主仍提供原生档位。
 - `Recommended` 按钮恢复使用模型默认，提交时省略 `reasoningEffort`，与明确选择某一档不同。
 - 通过 DSH 自带的会话模型目录保存，并跟随其订阅更新；设置在后续请求生效。
 - 拖动取消或拖动中按 Escape 恢复原值。保存失败时显示错误并恢复已保存档位。
@@ -86,7 +89,7 @@ npm pack --ignore-scripts
 - `src/pixel-motion.js`：根据参考片段逐格取色生成的数值曲线；包含短暂的首尾衔接，不包含录屏图像。
 - `src/client.js`：DSH / React 接入层。
 - `lib/client.js`：预构建的 ModuleLoader 入口。
-- `index.js`、`cordis.patch.yml`：Host 伴随入口与插件注册。
+- `index.js`、`cordis.patch.yml`：宿主入口、Ultra 会话提示与插件注册。
 - `demo/index.html`：独立演示。
 - `packages/`：可直接下载的安装包。
 
@@ -96,6 +99,12 @@ npm pack --ignore-scripts
 
 | 版本 | 变化 |
 | --- | --- |
+| 1.0.32 | 将 Ultra 提示的开头改为验证模型全部能力的高压测试 |
+| 1.0.31 | 问号信息改为独立卡片，打开和关闭时平滑展开、收起 |
+| 1.0.30 | Ultra 提示在切档成功时弹出，再缩回问号，可点击问号重读 |
+| 1.0.29 | 将 Ultra 状态提示移至推理滑块上方 |
+| 1.0.28 | 紫色粒子特效只在 Ultra 档触发 |
+| 1.0.27 | 新增 Ultra 档，在 DeepSeek Max 基础上启用当前会话的深入分析与子代理复核提示 |
 | 1.0.26 | 移除安装时的自动构建入口，直接使用预构建产物，避免 Git 安装触发构建授权及准备失败 |
 | 1.0.25 | 细调网格：亮区占每格节距的 75%，四边各留 12.5%，横竖暗缝保持同一比例 |
 | 1.0.11 | 打开面板直接显示已保存最高档的紫色色块并保留闪动，仅手动调入最高档播放蔓延 |

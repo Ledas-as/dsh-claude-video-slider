@@ -1,6 +1,21 @@
 // DSH's shared model directory remains authoritative. Only its model seat is replaced.
 // Slot/directory integration follows the upstream DSH and MEMZ-JZY plugin patterns.
 const h = React.createElement;
+const ULTRA_STEP = { id: 'dsh-claude-video-slider:ultra', label: 'Ultra', accent: true };
+
+async function ultraRequest(sessionId, change = {}, signal) {
+  const response = await fetch('api/dsh-claude-video-slider/ultra', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId, ...change }),
+    signal,
+  });
+  const result = await response.json().catch(() => null);
+  if (!response.ok || typeof result?.active !== 'boolean') {
+    throw new Error(result?.error || 'Ultra 服务暂不可用。');
+  }
+  return result.active;
+}
 
 function AnimatedLabel({ text, order = 0 }) {
   const ref = React.useRef(null);
@@ -8,7 +23,7 @@ function AnimatedLabel({ text, order = 0 }) {
   return h('dsh-claude-slider-label', { ref });
 }
 
-function EffortSlider({ steps, value, recommended, defaultActive, disabled, saving, onChange }) {
+function EffortSlider({ steps, value, recommended, defaultActive, disabled, saving, ultraActive, onChange }) {
   const ref = React.useRef(null);
   const changeRef = React.useRef(onChange);
   changeRef.current = onChange;
@@ -28,16 +43,19 @@ function EffortSlider({ steps, value, recommended, defaultActive, disabled, savi
     element.toggleAttribute('saving', saving);
     element.disabled = disabled;
   }, [saving, disabled]);
+  React.useLayoutEffect(() => { ref.current.ultraActive = ultraActive; }, [ultraActive]);
   React.useEffect(() => {
     const element = ref.current;
-    const change = event => changeRef.current(event.detail.index);
+    const change = async event => {
+      if (await changeRef.current(event.detail.index)) element.showUltraHint();
+    };
     element.addEventListener('change', change);
     return () => element.removeEventListener('change', change);
   }, []);
   return h('dsh-claude-effort-slider', { ref, inline: '' });
 }
 
-function ModelControl({ available, locked, directory, load, select }) {
+function ModelControl({ sessionId, available, locked, directory, load, select }) {
   const subscribe = React.useCallback(listener => directory.subscribe(listener), [directory]);
   const snapshot = React.useCallback(() => directory.getSnapshot(), [directory]);
   const state = React.useSyncExternalStore(subscribe, snapshot, snapshot);
@@ -50,13 +68,22 @@ function ModelControl({ available, locked, directory, load, select }) {
   const operation = React.useRef(0);
   const submitting = React.useRef(false);
   const [saving, setSaving] = React.useState(false);
+  const [ultraMode, setUltraMode] = React.useState(null);
   const choices = React.useMemo(() => (state.groups || []).flatMap(group => group.models.map(model => ({ group, model }))), [state.groups]);
   const selected = state.pending || state.current;
   const choice = choices.find(item => item.group.id === selected?.provider && item.model.id === selected?.model);
   const reasoning = choice?.model.reasoning;
-  const steps = React.useMemo(() => (reasoning?.efforts || []).map(effort => ({ id: effort.id, label: effort.name })), [reasoning]);
+  const supportsUltra = /(?:^|\/)deepseek[-_]/i.test(choice?.model.id ?? '')
+    && reasoning?.efforts?.some(effort => effort.id === 'max');
+  const mode = ultraMode?.sessionId === sessionId ? ultraMode : null;
+  const showUltra = Boolean(supportsUltra && mode);
+  const steps = React.useMemo(() => {
+    const native = (reasoning?.efforts || []).map(effort => ({ id: effort.id, label: effort.name }));
+    return showUltra ? [...native, ULTRA_STEP] : native;
+  }, [reasoning, showUltra]);
   const recommended = Math.max(0, steps.findIndex(step => step.id === reasoning?.defaultEffort));
-  const effortId = selected?.reasoningEffort ?? reasoning?.defaultEffort;
+  const ultraActive = showUltra && mode?.active === true && selected?.reasoningEffort === 'max';
+  const effortId = ultraActive ? ULTRA_STEP.id : selected?.reasoningEffort ?? reasoning?.defaultEffort;
   const index = Math.max(0, steps.findIndex(step => step.id === effortId));
   const defaultActive = selected?.reasoningEffort === undefined;
   const effortLabel = defaultActive ? 'Default' : steps.find(step => step.id === effortId)?.label || 'Default';
@@ -65,6 +92,14 @@ function ModelControl({ available, locked, directory, load, select }) {
 
   React.useEffect(() => { if (available) load(); }, [available, load]);
   React.useEffect(() => () => { operation.current += 1; }, []);
+  React.useEffect(() => {
+    if (!available || !supportsUltra || busy) return;
+    const controller = new AbortController();
+    ultraRequest(sessionId, {}, controller.signal).then(active => {
+      if (!controller.signal.aborted) setUltraMode({ sessionId, active });
+    }).catch(() => {});
+    return () => controller.abort();
+  }, [sessionId, available, supportsUltra, busy, pane, selected?.provider, selected?.model, selected?.reasoningEffort]);
 
   const close = () => { setPane(null); trigger.current?.focus({ preventScroll: true }); };
   const open = (next, event) => {
@@ -118,19 +153,27 @@ function ModelControl({ available, locked, directory, load, select }) {
     };
   }, [pane]);
 
-  async function submit(selection, closeAfter = false) {
+  async function submit(selection, closeAfter = false, enableUltra = false) {
     if (disabled || submitting.current) return;
     submitting.current = true;
     setSaving(true);
     setError('');
     const sequence = ++operation.current;
     try {
-      const outcome = await select(selection);
-      if (operation.current !== sequence) return;
-      if (outcome === false || outcome?.ok === false) {
-        throw new Error(outcome?.error?.message || directory.getSnapshot().error || '设置未保存，请重试。');
+      // Selecting native Max must also clear Ultra when Max is already saved.
+      if (enableUltra || mode?.active || (showUltra && selection.reasoningEffort === 'max')) {
+        const active = await ultraRequest(sessionId, { enabled: enableUltra, selection });
+        if (operation.current !== sequence) return;
+        setUltraMode({ sessionId, active });
+      } else {
+        const outcome = await select(selection);
+        if (operation.current !== sequence) return;
+        if (outcome === false || outcome?.ok === false) {
+          throw new Error(outcome?.error?.message || directory.getSnapshot().error || '设置未保存，请重试。');
+        }
       }
       if (closeAfter) close();
+      return enableUltra && !ultraActive;
     } catch (failure) {
       if (operation.current === sequence) setError(failure?.message || '设置未保存，请重试。');
     } finally {
@@ -142,13 +185,14 @@ function ModelControl({ available, locked, directory, load, select }) {
   }
 
   function chooseEffort(next) {
-    if (!selected || !steps[next]) return;
-    return submit({ provider: selected.provider, model: selected.model, reasoningEffort: steps[next].id });
+    const step = steps[next];
+    if (!selected || !step) return;
+    const enableUltra = step === ULTRA_STEP;
+    return submit({ provider: selected.provider, model: selected.model, reasoningEffort: enableUltra ? 'max' : step.id }, false, enableUltra);
   }
 
   if (!available) return null;
   const modelName = choice?.model.name || '选择模型';
-  const maximum = !defaultActive && steps.length > 1 && index === steps.length - 1;
   const message = error || state.error;
 
   return h('div', { className: 'dsv-root', ref: root, 'data-saving': busy && !locked ? '' : undefined },
@@ -158,13 +202,13 @@ function ModelControl({ available, locked, directory, load, select }) {
       onClick: event => open('model', event),
     }, h(AnimatedLabel, { text: modelName })),
     choice && h('button', {
-      type: 'button', className: 'dsv-trigger dsv-effort' + (maximum ? ' dsv-maximum' : ''), disabled,
+      type: 'button', className: 'dsv-trigger dsv-effort' + (ultraActive ? ' dsv-maximum' : ''), disabled,
       'aria-label': `推理等级，当前 ${effortLabel}`, 'aria-haspopup': 'dialog', 'aria-expanded': pane === 'effort', 'aria-controls': pane === 'effort' ? id : undefined,
       onClick: event => open('effort', event),
     }, h(AnimatedLabel, { text: effortLabel, order: index }), h('span', { 'aria-hidden': true, className: busy ? 'dsv-spinner' : 'dsv-chevron' }, busy ? '◌' : '⌄')),
     pane && h('div', { key: pane, id, ref: popup, popover: 'manual', role: 'dialog', 'aria-label': pane === 'effort' ? '推理等级' : '选择模型', 'aria-busy': busy, className: 'dsv-popup' + (pane === 'model' ? ' dsv-models' : '') },
       pane === 'effort' ? [
-        steps.length ? h(EffortSlider, { key: 'slider', steps, value: index, recommended, defaultActive, disabled, saving: busy && !locked, onChange: chooseEffort })
+        steps.length ? h(EffortSlider, { key: 'slider', steps, value: index, recommended, defaultActive, disabled, saving: busy && !locked, ultraActive, onChange: chooseEffort })
           : h('p', { key: 'empty', className: 'dsv-status' }, '当前模型没有声明可选推理等级。'),
         h('button', {
           key: 'default', type: 'button', className: 'dsv-default', disabled,
@@ -234,7 +278,7 @@ return {
           const directory = directories.directoryFor(sessionId);
           const available = sessions.subagentAddress(sessionId) === undefined;
           return {
-            available, directory: directory.store,
+            sessionId, available, directory: directory.store,
             load: () => { if (available) directory.load().catch(() => {}); },
             select: selection => available ? directory.select(selection) : Promise.resolve(false),
           };

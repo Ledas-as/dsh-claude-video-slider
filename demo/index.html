@@ -23,7 +23,7 @@
 <main>
   <header><span class="mark">d</span> DSH / CLAUDE SLIDER</header>
   <h1>把思考，调到刚好。</h1>
-  <p class="intro">复刻视频里的细节：白色滑块、柔和吸附，以及最高档的紫色像素流。</p>
+  <p class="intro">白色滑块、柔和吸附，以及 Ultra 档的紫色像素流。</p>
   <section class="stage" aria-label="插件交互预览">
     <div class="composer">
       <textarea aria-label="预览输入框" spellcheck="false">把这个交互做得更简单一点。
@@ -37,7 +37,7 @@
     <div class="popup" id="popup" role="dialog" aria-label="推理等级"><dsh-claude-effort-slider id="slider"></dsh-claude-effort-slider></div>
   </section>
   <div class="caption"><span>拖动或点击 · 松开吸附 · 方向键微调</span><span>独立预览，不连接模型服务</span></div>
-  <div class="settings"><button id="medium">Medium</button><button id="ultra">Ultracode ↗</button><span class="hint">最高档：像素由右向左展开</span></div>
+  <div class="settings"><button id="medium">Medium</button><button id="ultra">Ultra ↗</button><span class="hint">Ultra 档：像素由右向左展开</span></div>
 </main>
 <script src="../src/pixel-motion.js"></script>
 <script src="../src/slider.js"></script>
@@ -48,14 +48,14 @@
   const name = document.querySelector('#effort-name');
   const model = document.querySelector('#model');
   const sets = {
-    video: ['Low', 'Medium', 'High', 'Extra', 'Max', 'Ultracode'],
+    video: ['Low', 'Medium', 'High', 'Extra', 'Max', 'Ultra'],
     deepseek: ['Low', 'High', 'Max'],
   };
   const committed = new Map([['video', 1], ['deepseek', 1]]);
   function sync(index) {
     const labels = sets[model.value];
     name.textContent = labels[index];
-    effort.classList.toggle('maximum', index === labels.length - 1);
+    effort.classList.toggle('maximum', labels[index] === 'Ultra');
   }
   function open(value) {
     popup.hidden = !value;
@@ -73,7 +73,7 @@
   });
   effort.addEventListener('click', () => open(popup.hidden));
   model.addEventListener('change', () => {
-    slider.steps = sets[model.value].map(label => ({ id: label.toLowerCase(), label }));
+    slider.steps = sets[model.value].map(label => ({ id: label.toLowerCase(), label, accent: label === 'Ultra' }));
     slider.recommended = 1;
     choose(committed.get(model.value));
   });
